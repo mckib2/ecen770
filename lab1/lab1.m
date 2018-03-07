@@ -99,14 +99,17 @@ end
 
 figure(1);
 for pp = 1:numel(P0)
-    semilogy(10*log10(Eb./N0(pp,:)),Pe_theoretical(pp,:), ...
-        'DisplayName',sprintf('P0_%d',pp));
+    x = 10*log10(Eb./N0(pp,:));
+    semilogy(x,Pe_theoretical(pp,:), ...
+        'DisplayName',sprintf('Theoretical P_{0%d}',pp));
     hold on;
+    semilogy(x,Pe(pp,:),...
+        'DisplayName',sprintf('Simulated P_{0%d}',pp));
 end
 title('Probability of error for BPSK signalling');
 xlabel('E_b/N_0 (dB)');
 ylabel('Probability of error');
-legend('show');
+legend('show','location','southwest');
 
 %% Helper Functions
 function [ out ] = Q(x)
