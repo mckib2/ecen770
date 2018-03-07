@@ -79,7 +79,7 @@ for pp = 1:numel(P0)
         waitbar(currstep/steps,h,sprintf('%2.2f%%',100*currstep/steps));
     end
 end
-close(h);
+delete(h); % remove wait bar
 
 %% (2) Theoretical
 % Prepare data from which to plot the theoretical probability of error
