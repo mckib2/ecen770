@@ -1,4 +1,4 @@
-%% Lab 1 - Simulating a Communications Channel
+%% Lab 1 - BPSK Portion
 % Nicholas McKibben
 % ECEn 770
 % 2018-03-06
@@ -17,9 +17,9 @@ close all;
 % (1) Initialization
 rng('default');
 Eb = 1;
-N = 5; % num of errors we wait for
+N = 8; % num of errors we wait for
 P0 = [ .5 .25 .1 ];
-gammas = linspace(1,10,15); % signal-to-noise ratio
+gammas = linspace(1,10,20); % signal-to-noise ratio
 sigma2 = zeros(numel(P0),numel(gammas));
 N0 = sigma2;
 Pe = sigma2;
@@ -28,6 +28,7 @@ Pe = sigma2;
 h = waitbar(0,'Simulating...');
 steps = numel(Pe);
 
+tic;
 % (2) for each signal-to-noise ratio gamma
 for pp = 1:numel(P0)
     for ii = 1:numel(gammas)
@@ -36,7 +37,7 @@ for pp = 1:numel(P0)
         N0(pp,ii) = Eb/gammas(ii);
         sigma2(pp,ii) = N0(pp,ii)/2;
 
-        % do
+        % (4) do
         nn = 0;
         nbits = 0;
         while nn < N
@@ -79,6 +80,8 @@ for pp = 1:numel(P0)
         waitbar(currstep/steps,h,sprintf('%2.2f%%',100*currstep/steps));
     end
 end
+sim_time = toc;
+fprintf('Simulation took %f seconds to run.\n',sim_time);
 delete(h); % remove wait bar
 
 %% (2) Theoretical
@@ -87,6 +90,7 @@ delete(h); % remove wait bar
 tau = 0;
 Pe_theoretical = zeros(size(Pe));
 for pp = 1:numel(P0)
+    tau = sigma2(pp,:)/(2*sqrt(Eb))*log(P0(pp)/(1-P0(pp)));    
     Pe_theoretical(pp,:) = Q((tau + sqrt(Eb))./sqrt(sigma2(pp,:)))*P0(pp) ...
         + Q((sqrt(Eb) - tau)./sqrt(sigma2(pp,:))).*(1 - P0(pp));
 end
@@ -99,26 +103,46 @@ end
 
 figure(1);
 for pp = 1:numel(P0)
+    subplot(numel(P0),1,pp);
     x = 10*log10(Eb./N0(pp,:));
     semilogy(x,Pe_theoretical(pp,:), ...
         'DisplayName',sprintf('Theoretical P_{0%d}',pp));
-    hold on;
+    hold on; grid on;
     semilogy(x,Pe(pp,:),...
         'DisplayName',sprintf('Simulated P_{0%d}',pp));
+    
+    legend('show','location','southwest');
+    title(sprintf('Probability of error for BPSK, P_0 = %%%d',100*P0(pp)));
+    xlabel('E_b/N_0 (dB)');
+    ylabel('Probability of error');
 end
-title('Probability of error for BPSK signalling');
+
+%% (4) Comments
+% Compare the theoretical and simulated results. Comment on the accuracy of
+% the simulation and the amount of time it took to run the simulation.
+% Comment on the importance of theoretical models (where it is possible to
+% obtain them).
+
+% The theoretical and simulated results are closely correlated, and they
+% get closer as N increases.  However, it takes a very long time to
+% simulate, as the number of bits needed to generate N errors becomes very
+% large.  It is much quicker to run a simple analytical expression to find
+% exact values.  If we were trying to simulate a scaled up version of this
+% model, it would be impractically long.  Analytically it would be very
+% easy and cheap.
+
+%% (5) Compare Probability of Error
+% Plot the probability of error for P0 = 0.1, P0 = 0.25 and PO = 0.5 on the
+% same axes. Compare them and comment.
+
+figure(2);
+semilogy(x,Pe_theoretical.');
+grid on;
+title('Probability of error');
 xlabel('E_b/N_0 (dB)');
-ylabel('Probability of error');
-legend('show','location','southwest');
+ylabel('Probability of Error');
+legend('P_0 = .5','P_0 = .25','P_0 = .1');
 
-%% Helper Functions
-function [ out ] = Q(x)
-    out = zeros(1,numel(x));
-    for ii = 1:numel(x)
-       out(ii) = 1/sqrt(2*pi)*integral(@probfun,x(ii),Inf);
-    end
-end
-
-function [ out ] = probfun(n)
-    out = exp(-n.^2/2);
-end
+% As P0 decreases, the probability of error decreases for all values of
+% Eb/N0.  The effect is slightly more pronounced for low SNR than at high
+% gamma values.
