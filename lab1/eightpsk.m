@@ -16,10 +16,11 @@ close all;
 % Follow algorithm 1.2...
 % (1) Initialization
 rng('default');
-Eb = 1;
-A = sqrt(Eb);
-N = 500; % num of errors we wait for
 M = 8;
+Eb = 1;
+Es = Eb*log2(M);
+A = sqrt(Es);
+N = 500; % num of errors we wait for
 gammas = linspace(1,50,30); % signal-to-noise ratio
 sigma2 = zeros(1,numel(gammas));
 N0 = sigma2;
@@ -34,7 +35,7 @@ tic;
 for ii = 1:numel(gammas)
     
     % (3) Compute N0, sigma2
-    N0(ii) = Eb/gammas(ii);
+    N0(ii) = Es/gammas(ii);
     sigma2(ii) = N0(ii)/2;
     
     % (4) do
@@ -42,7 +43,7 @@ for ii = 1:numel(gammas)
     nbits = 0;
     while nn < N
         % (5) Generate transmitted bits
-        nbits = nbits + 1;
+        nbits = nbits + log2(M);
         btx = bin2dec(strjoin(string(randi(2,1,log2(M)) - 1)));
         
         
@@ -76,7 +77,11 @@ for ii = 1:numel(gammas)
         % (11) Compare tx to rx
         if brx ~= btx
             % (12) Accumulate error
-            nn = nn + 1;
+            brx = dec2bin(brx,log2(M));
+            btx = dec2bin(btx,log2(M));
+            bb = brx - btx;
+            
+            nn = nn + numel(bb(bb == 0));
         end
     end
     
@@ -93,18 +98,24 @@ delete(h); % remove wait bar
 % Prepare data from which to plot the bound on the probability of symbol
 % error Ps using (1.26) and probability of bit error Pb using (1.27).
 
-dmin = norm([ 1 0 ] - [ 1/sqrt(2) 1/sqrt(2) ]);
-Ps_theoretical = 2*Q(dmin./(2*sqrt(sigma2)));
+dmin = norm(A*[ 1 0 ] - A*[ 1/sqrt(2) 1/sqrt(2) ]);
+Ps_theoretical_book = 2*Q(dmin./(2*sqrt(sigma2)));
+
+% Ps_theoretical = erfc(sqrt(log2(M)*Eb./N0)*sin(pi/M));
+Ps_theoretical = 2*Q(sqrt(2*Es./N0)*sin(pi/M));
 
 figure(1);
 subplot(2,1,1);
 x = 10*log10(Eb./N0);
-semilogy(x,Ps_theoretical/log2(M)); grid on;
+semilogy(x,Ps_theoretical/log2(M)); grid on; hold on;
+semilogy(x,Ps_theoretical_book/log2(M));
 xlabel('E_b/N_0');
 ylabel('P_b');
 
 subplot(2,1,2);
-semilogy(x,Ps_theoretical); grid on;
+x = 10*log10(Es./N0);
+semilogy(x,Ps_theoretical); grid on; hold on;
+semilogy(x,Ps_theoretical_book);
 xlabel('E_s/N_0');
 ylabel('P_s');
 
@@ -113,8 +124,11 @@ ylabel('P_s');
 % axes as the bounds on the probabilities of error.
 
 figure(2);
-semilogy(x,Ps,'DisplayName','Simulated P_s');
-hold on; grid on;
-semilogy(x,Ps_theoretical,'DisplayName','Theoretical P_s');
-
+semilogy(x,Ps,'DisplayName','Simulated P_s'); grid on; hold on;
+semilogy(x,Ps_theoretical_book,'DisplayName','Theoretical P_s');
 legend(gca,'show');
+
+%% (4) Compare
+% Compare the theoretical and simulated results. Comment on the accuracy of
+% the bound compared to the simulation and the amount of time it took to
+% run the simulation.
