@@ -58,7 +58,7 @@ for ii = 1:numel(gammas)
         nbits = nbits + k;
         
         % (8) Compute the syndrome s = rH^T
-        s = r*H';
+        s = mod(r*H',2);
         
         % (9) If s ~= 0, determine the error location based on the column
         % of H which is equal to s and complement that bit of r

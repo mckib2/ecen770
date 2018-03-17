@@ -19,9 +19,9 @@ rng('default');
 M = 8;
 Eb = 1;
 Es = Eb*log2(M);
-A = sqrt(Es);
-N = 500; % num of errors we wait for
-gammas = linspace(1,50,30); % signal-to-noise ratio
+A = sqrt(Eb);
+N = 8; % num of errors we wait for
+gammas = linspace(1,50,15); % signal-to-noise ratio
 sigma2 = zeros(1,numel(gammas));
 N0 = sigma2;
 Ps = sigma2;
@@ -35,7 +35,7 @@ tic;
 for ii = 1:numel(gammas)
     
     % (3) Compute N0, sigma2
-    N0(ii) = Es/gammas(ii);
+    N0(ii) = Eb/gammas(ii);
     sigma2(ii) = N0(ii)/2;
     
     % (4) do
@@ -49,15 +49,25 @@ for ii = 1:numel(gammas)
         
         % (6) Map the bits into the signal constellation, Gray encoding
         s = btx;
-        s(s == 7) = 1;
-        s(s == 6) = A*exp(1j*pi/4);
-        s(s == 2) = A*exp(1j*pi/2);
-        s(s == 3) = A*exp(1j*3*pi/4);
-        s(s == 1) = A*exp(1j*pi);
-        s(s == 0) = A*exp(1j*5*pi/4);
-        s(s == 4) = A*exp(1j*3*pi/2);
-        s(s == 5) = A*exp(1j*7*pi/4);
-        idxs = [ 7 6 2 3 1 0 4 5 ];
+        switch s
+            case 7
+                s = 1;
+            case 6
+                s = A*exp(1j*pi/4);
+            case 2
+                s = A*exp(1j*pi/2);
+            case 3
+                s = A*exp(1j*3*pi/4);
+            case 1
+                s = A*exp(1j*pi);
+            case 0
+                s = A*exp(1j*5*pi/4);
+            case 4
+                s = A*exp(1j*3*pi/2);
+            case 5
+                s = A*exp(1j*7*pi/4);
+        end
+       idxs = [ 7 6 2 3 1 0 4 5 ];
         
         
         % (7) Generate noise
@@ -68,7 +78,7 @@ for ii = 1:numel(gammas)
         
         % (9) Perform signal detection
         con = A*exp(1j*[ 0 pi/4 pi/2 3*pi/4 pi 5*pi/4 3*pi/2 7*pi/4 ]).';
-        [ ~,idx ] = min((con - r).^2);
+        [ ~,idx ] = min(abs((con - r).^2));
         s_hat = con(idx);
         
         % (10) Determine brx
@@ -102,7 +112,7 @@ dmin = norm(A*[ 1 0 ] - A*[ 1/sqrt(2) 1/sqrt(2) ]);
 Ps_theoretical_book = 2*Q(dmin./(2*sqrt(sigma2)));
 
 % Ps_theoretical = erfc(sqrt(log2(M)*Eb./N0)*sin(pi/M));
-Ps_theoretical = 2*Q(sqrt(2*Es./N0)*sin(pi/M));
+Ps_theoretical = 2*Q(sqrt(2*Eb./N0)*sin(pi/M));
 
 figure(1);
 subplot(2,1,1);
