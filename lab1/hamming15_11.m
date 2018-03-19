@@ -10,21 +10,21 @@ rng('default');
 M = 2;
 Ec = 1;
 n = 15; k = 11;
+Eb = (n/k)*Ec;
 R = k/n;
 crossprob = @(N00) Q(sqrt(2*Ec/N00));
-gammas = linspace(1,10,20); % signal-to-noise ratio
+gammas = linspace(1,7,15); % signal-to-noise ratio
 sigma2 = zeros(1,numel(gammas));
 N0 = sigma2;
 Pe = sigma2;
-N = 20; % get this many errors
+N = 125; % get this many errors
 
 % Parity Matrix - (3.4) in book
-Par = [ 1 1 0 1 1 0 1 0 1 0 1;
-	    1 0 1 1 0 1 1 0 0 1 1;
-	    0 1 1 1 0 0 0 1 1 1 1;
-	    0 0 0 0 1 1 1 1 1 1 1 ];
-H = [ Par eye(n-k) ];
-
+A = [ 1 1 0 1 1 0 1 0 1 0 1;
+      1 0 1 1 0 1 1 0 0 1 1;
+	  0 1 1 1 0 0 0 1 1 1 1;
+	  0 0 0 0 1 1 1 1 1 1 1 ];
+H = [ A eye(n-k) ];
 midx = 1:k;
 
 % (2) for each signal-to-noise ratio gamma = Eb/N0
@@ -72,7 +72,7 @@ for ii = 1:numel(gammas)
             % (11) Accumulate the number of bits in error
             if err
                 nn = nn + err;
-                fprintf('gamma = %d, nn = %d\n',ii,nn);
+                %fprintf('gamma = %d, nn = %d\n',ii,nn);
             end
         end
     end
@@ -82,13 +82,25 @@ for ii = 1:numel(gammas)
 end
 
 %% Theoretical Uncoded BPSK
-Pe_theoretical = Q(sqrt(2*Ec./N0));
+gammast = [ gammas linspace(8,15,10) ];
+N0t = Eb./(R*gammast);
+Pe_theoretical = Q(sqrt(2*Eb./N0t));
 
 %% Plots
-x = 10*log10(Ec./N0);
+x1 = 10*log10(Eb./N0);
+x2 = 10*log10(Eb./N0t);
 figure(1);
-semilogy(x,Pe,'DisplayName','Simulated'); grid on; hold on;
-semilogy(x,Pe_theoretical,'DisplayName','Theoretical');
+semilogy(x1,Pe,'k-','DisplayName','Simulated'); grid on; hold on;
+semilogy(x2,Pe_theoretical,'k--','DisplayName','Theoretical');
 title('Probability of Error');
 xlabel('E_b/N_0 (dB)');
 ylabel('P_b');
+
+%% Coding Gain
+fSNR_sim = fit(Pe',x1','poly2');
+SNR_sim = fSNR_sim(10e-5);
+fSNR_the = fit(Pe_theoretical',x2','poly2');
+SNR_the = fSNR_the(10e-5);
+
+coding_gain = abs(SNR_sim - SNR_the);
+fprintf('The coding gain for Pb = 10^-5 is %f dB\n',coding_gain);

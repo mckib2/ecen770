@@ -23,22 +23,20 @@ n = 7; k = 4;
 Eb = (n/k)*Ec;
 R = k/n;
 crossprob = @(N00) Q(sqrt(2*Ec/N00));
-gammas = linspace(1,10,10); % signal-to-noise ratio
+gammas = linspace(2,10,10); % signal-to-noise ratio
 sigma2 = zeros(1,numel(gammas));
 N0 = sigma2;
 Pe = sigma2;
-N = 4; % get this many errors
+N = 30; % get this many errors
 
-% Generator Matrix - (1.34) in book
-G = [ 1 1 0 1 0 0 0;
-      0 1 1 0 1 0 0;
-      0 0 1 1 0 1 0;
-      0 0 0 1 1 0 1 ];
-H = [ 1 0 1 1 1 0 0;
-      0 1 0 1 1 1 0;
-      0 0 1 0 1 1 1 ];
-  
-midx = [ 2 3 4 5 ];
+% Hamming Stuffs
+A = [ 1 1 1;
+      1 1 0;
+      1 0 1;
+      0 1 1 ];
+G = [ eye(k) A ];
+H = [ A.' eye(n-k) ];
+midx = 1:k;
 
 % (2) for each signal-to-noise ratio gamma = Eb/N0
 for ii = 1:numel(gammas)
@@ -86,7 +84,7 @@ for ii = 1:numel(gammas)
             % (11) Accumulate the number of bits in error
             if err
                 nn = nn + err;
-                fprintf('gamma = %d, nn = %d\n',ii,nn);
+                %fprintf('gamma = %d, nn = %d\n',ii,nn);
             end
         end
     end
@@ -97,24 +95,29 @@ end
 
 %% Theoretical Uncoded BPSK
 gammast = [ gammas linspace(10,20,20) ];
-N0t = Ec./(R*gammast);
-Pe_theoretical = Q(sqrt(2*Ec./N0t));
+N0t = Eb./(R*gammast);
+Pe_theoretical = Q(sqrt(2*Eb./N0t));
 
 %% Plots
-x1 = 10*log10(Ec./N0);
-x2 = 10*log10(Ec./N0t);
+x1 = 10*log10(Eb./N0);
+x2 = 10*log10(Eb./N0t);
 figure(1);
-semilogy(x1,Pe,'DisplayName','Simulated'); grid on; hold on;
-semilogy(x2,Pe_theoretical,'DisplayName','Theoretical');
+semilogy(x1,Pe,'k-','DisplayName','Simulated Decoded'); grid on; hold on;
+semilogy(x2,Pe_theoretical,'k--','DisplayName','Theoretical Uncoded');
 title('Probability of Error');
 xlabel('E_b/N_0 (dB)');
 ylabel('P_b');
 legend(gca,'show');
 
 %% Coding Gain
-SNR_sim = interp1(Pe,x1,1e-5,'spline');
-[ x,idx ] = unique(x2);
-SNR_the = interp1(Pe_theoretical(idx),x2(idx),1e-5,'spline');
-coding_gain = abs(SNR_sim - SNR_the);
+% SNR_sim = interp1(Pe,x1,10e-5,'spline');
+% [ x,idx ] = unique(x2);
+% SNR_the = interp1(Pe_theoretical(idx),x2(idx),10e-5,'spline');
 
+fSNR_sim = fit(Pe',x1','poly2');
+SNR_sim = fSNR_sim(10e-5);
+fSNR_the = fit(Pe_theoretical',x2','poly2');
+SNR_the = fSNR_the(10e-5);
+
+coding_gain = abs(SNR_sim - SNR_the);
 fprintf('The coding gain for Pb = 10^-5 is %f dB\n',coding_gain);

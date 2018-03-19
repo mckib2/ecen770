@@ -20,11 +20,12 @@ M = 8;
 Eb = 1;
 Es = Eb*log2(M);
 A = sqrt(Eb);
-N = 40; % num of errors we wait for
+N = 15; % num of errors we wait for
 gammas = linspace(1,60,20); % signal-to-noise ratio
 sigma2 = zeros(1,numel(gammas));
 N0 = sigma2;
 Ps = sigma2;
+Pb = Ps;
 
 % Let's see how long this is going to take...
 h = waitbar(0,'Simulating...');
@@ -39,11 +40,14 @@ for ii = 1:numel(gammas)
     sigma2(ii) = N0(ii)/2;
     
     % (4) do
-    nn = 0;
+    nn_b = 0;
+    nn_s = 0;
     nbits = 0;
-    while nn < N
+    nsyms = 0;
+    while nn_s < N
         % (5) Generate transmitted bits
         nbits = nbits + log2(M);
+        nsyms = nsyms + 1;
         btx = bin2dec(strjoin(string(randi(2,1,log2(M)) - 1)));
         
         
@@ -91,11 +95,13 @@ for ii = 1:numel(gammas)
             btx = dec2bin(btx,log2(M));
             bb = brx - btx;
             
-            nn = nn + numel(bb(bb == 0));
+            nn_b = nn_b + numel(bb(bb == 0));
+            nn_s = nn_s + 1;
         end
     end
     
-    Ps(ii) = nn/nbits;
+    Ps(ii) = nn_s/nsyms;
+    Pb(ii) = nn_b/nbits;
     
     % Update waitbar
     waitbar(ii/steps,h,sprintf('%2.2f%%',100*ii/steps));
@@ -109,28 +115,31 @@ delete(h); % remove wait bar
 % error Ps using (1.26) and probability of bit error Pb using (1.27).
 
 dmin = norm(A*[ 1 0 ] - A*[ 1/sqrt(2) 1/sqrt(2) ]);
-Ps_theoretical_book = 2*Q(dmin./(2*sqrt(sigma2)));
+% Pb_theoretical = 2*Q(dmin./(2*sqrt(sigma2)));
 
 % These are also ways from what the interwebs tell me:
 % Ps_theoretical = erfc(sqrt(log2(M)*Eb./N0)*sin(pi/M));
-Ps_theoretical = 2*Q(sqrt(2*Eb./N0)*sin(pi/M));
+Pb_theoretical = 2*Q(sqrt(2*Eb./N0)*sin(pi/M));
+% Ps_theoretical = 2*Q(sqrt(2*Eb./N0)*sin(pi/M));
+% Book says these become about the same as SNR increases
+Ps_theoretical = 2*Q(dmin./(2*sqrt(sigma2)));
 
 figure(1);
 x1 = 10*log10(Eb./N0);
-semilogy(x1,Ps_theoretical_book/log2(M),'k-', ...
+semilogy(x1,Pb_theoretical,'k-', ...
     'DisplayName','Theoretical Bit Bound');
 grid on; hold on;
-x2 = 10*log10(Es./N0);
-semilogy(x1,Ps_theoretical,'k--','DisplayName','Theoretical Symbol Bound');
+x2 = 10*log10(Eb./N0);
+semilogy(x2,Ps_theoretical,'k--','DisplayName','Theoretical Symbol Bound');
 title('Theoretic probability of symbol error and bit error');
-xlabel('E_s/N_0');
+xlabel('E_b/N_0');
 ylabel('P_s');
 
 % Plot the simulated probability of symbol error and bit error on the same
 % axes as the bounds on the probabilities of error.
 
 semilogy(x1,Ps,'DisplayName','Simulated P_s');
-semilogy(x1,Ps/log2(M),'DisplayName','Simulated P_b');
+semilogy(x1,Pb,'DisplayName','Simulated P_b');
 legend(gca,'show');
 
 %% (4) Compare

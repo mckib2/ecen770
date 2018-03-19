@@ -15,7 +15,7 @@ function [ p ] = Q(xlist)
     for x = xlist
         i = i+1;
         if(x < 0)
-            p(i) = 1- 0.5*erfc(-x/sqrt(2));
+            p(i) = 1 - 0.5*erfc(-x/sqrt(2));
         else
             p(i) = 0.5*erfc(x/sqrt(2));
         end
