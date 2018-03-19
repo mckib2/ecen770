@@ -1,44 +1,31 @@
-%% Lab 1 - Coded BPSK Simulation
-% Nicholas McKibben
-% ECEn 770
-% 2018-03-13
+%% (2) Hamming Code Simulation
+% Repeat this for a (15, 11) Hamming code.
 
 clear;
 close all;
-
-%% (1) Simulation
-% Write a program that will simulate performance of the (7,4) Hamming code
-% over a BSC channel with channel crossover probability p =
-% Q(sqrt(2*Eb/N0)) and plot the probability of error as a function of Eb/N0
-% in dB. On the same plot, plot the theoretical probability of error for
-% uncoded BPSK transmission. Identify what the coding gain is for a
-% probability of error Pb = 10e-5.
 
 % Following Algorithm 1.4...
 % (1) Fix Ec (typically Ec = 1). Compute R.
 rng('default');
 M = 2;
 Ec = 1;
-n = 7; k = 4;
-Eb = (n/k)*Ec;
+n = 15; k = 11;
 R = k/n;
 crossprob = @(N00) Q(sqrt(2*Ec/N00));
-gammas = linspace(1,10,10); % signal-to-noise ratio
+gammas = linspace(1,10,20); % signal-to-noise ratio
 sigma2 = zeros(1,numel(gammas));
 N0 = sigma2;
 Pe = sigma2;
-N = 4; % get this many errors
+N = 20; % get this many errors
 
-% Generator Matrix - (1.34) in book
-G = [ 1 1 0 1 0 0 0;
-      0 1 1 0 1 0 0;
-      0 0 1 1 0 1 0;
-      0 0 0 1 1 0 1 ];
-H = [ 1 0 1 1 1 0 0;
-      0 1 0 1 1 1 0;
-      0 0 1 0 1 1 1 ];
-  
-midx = [ 2 3 4 5 ];
+% Parity Matrix - (3.4) in book
+Par = [ 1 1 0 1 1 0 1 0 1 0 1;
+	    1 0 1 1 0 1 1 0 0 1 1;
+	    0 1 1 1 0 0 0 1 1 1 1;
+	    0 0 0 0 1 1 1 1 1 1 1 ];
+H = [ Par eye(n-k) ];
+
+midx = 1:k;
 
 % (2) for each signal-to-noise ratio gamma = Eb/N0
 for ii = 1:numel(gammas)
@@ -62,7 +49,7 @@ for ii = 1:numel(gammas)
         nbits = nbits + k;
         
         % (8) Compute the syndrome s = rH^T
-        s = mod(r*H.',2);
+        s = mod(r*H',2);
         
         % (9) If s ~= 0, determine the error location based on the column
         % of H which is equal to s and complement that bit of r
@@ -82,7 +69,6 @@ for ii = 1:numel(gammas)
             cnt = numel(dec(dec == 0));
             
             err = k - cnt;
-            
             % (11) Accumulate the number of bits in error
             if err
                 nn = nn + err;
@@ -96,25 +82,13 @@ for ii = 1:numel(gammas)
 end
 
 %% Theoretical Uncoded BPSK
-gammast = [ gammas linspace(10,20,20) ];
-N0t = Ec./(R*gammast);
-Pe_theoretical = Q(sqrt(2*Ec./N0t));
+Pe_theoretical = Q(sqrt(2*Ec./N0));
 
 %% Plots
-x1 = 10*log10(Ec./N0);
-x2 = 10*log10(Ec./N0t);
+x = 10*log10(Ec./N0);
 figure(1);
-semilogy(x1,Pe,'DisplayName','Simulated'); grid on; hold on;
-semilogy(x2,Pe_theoretical,'DisplayName','Theoretical');
+semilogy(x,Pe,'DisplayName','Simulated'); grid on; hold on;
+semilogy(x,Pe_theoretical,'DisplayName','Theoretical');
 title('Probability of Error');
 xlabel('E_b/N_0 (dB)');
 ylabel('P_b');
-legend(gca,'show');
-
-%% Coding Gain
-SNR_sim = interp1(Pe,x1,1e-5,'spline');
-[ x,idx ] = unique(x2);
-SNR_the = interp1(Pe_theoretical(idx),x2(idx),1e-5,'spline');
-coding_gain = abs(SNR_sim - SNR_the);
-
-fprintf('The coding gain for Pb = 10^-5 is %f dB\n',coding_gain);

@@ -20,8 +20,8 @@ M = 8;
 Eb = 1;
 Es = Eb*log2(M);
 A = sqrt(Eb);
-N = 8; % num of errors we wait for
-gammas = linspace(1,50,15); % signal-to-noise ratio
+N = 40; % num of errors we wait for
+gammas = linspace(1,60,20); % signal-to-noise ratio
 sigma2 = zeros(1,numel(gammas));
 N0 = sigma2;
 Ps = sigma2;
@@ -104,41 +104,44 @@ sim_time = toc;
 fprintf('Simulation took %f seconds to run.\n',sim_time);
 delete(h); % remove wait bar
 
-%% (2) Theoretical
+%% (2) Plots
 % Prepare data from which to plot the bound on the probability of symbol
 % error Ps using (1.26) and probability of bit error Pb using (1.27).
 
 dmin = norm(A*[ 1 0 ] - A*[ 1/sqrt(2) 1/sqrt(2) ]);
 Ps_theoretical_book = 2*Q(dmin./(2*sqrt(sigma2)));
 
+% These are also ways from what the interwebs tell me:
 % Ps_theoretical = erfc(sqrt(log2(M)*Eb./N0)*sin(pi/M));
 Ps_theoretical = 2*Q(sqrt(2*Eb./N0)*sin(pi/M));
 
 figure(1);
-subplot(2,1,1);
-x = 10*log10(Eb./N0);
-semilogy(x,Ps_theoretical/log2(M)); grid on; hold on;
-semilogy(x,Ps_theoretical_book/log2(M));
-xlabel('E_b/N_0');
-ylabel('P_b');
-
-subplot(2,1,2);
-x = 10*log10(Es./N0);
-semilogy(x,Ps_theoretical); grid on; hold on;
-semilogy(x,Ps_theoretical_book);
+x1 = 10*log10(Eb./N0);
+semilogy(x1,Ps_theoretical_book/log2(M),'k-', ...
+    'DisplayName','Theoretical Bit Bound');
+grid on; hold on;
+x2 = 10*log10(Es./N0);
+semilogy(x1,Ps_theoretical,'k--','DisplayName','Theoretical Symbol Bound');
+title('Theoretic probability of symbol error and bit error');
 xlabel('E_s/N_0');
 ylabel('P_s');
 
-%% (3) Plots
 % Plot the simulated probability of symbol error and bit error on the same
 % axes as the bounds on the probabilities of error.
 
-figure(2);
-semilogy(x,Ps,'DisplayName','Simulated P_s'); grid on; hold on;
-semilogy(x,Ps_theoretical_book,'DisplayName','Theoretical P_s');
+semilogy(x1,Ps,'DisplayName','Simulated P_s');
+semilogy(x1,Ps/log2(M),'DisplayName','Simulated P_b');
 legend(gca,'show');
 
 %% (4) Compare
 % Compare the theoretical and simulated results. Comment on the accuracy of
 % the bound compared to the simulation and the amount of time it took to
 % run the simulation.
+
+% Even at a high N, the simulated bounces around a lot.  This simulation
+% does however run faster than bpsk (since the constellation is more
+% tighly arranged => more errors).  Low SNR values definitely go a lot
+% faster - but as the two plots start converging, the probability of error
+% goes so low that observing N errors becomes very time consuming.  Again,
+% the value of a theoretical model is validated as we get a much smoother
+% result virtually instantly compared to the simulation time and results.

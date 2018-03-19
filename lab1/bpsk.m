@@ -13,11 +13,15 @@ close all;
 % for SNRs in the range from 0 to 10 dB, for the three cases that P0 = .5,
 % P0 = .25, and P0 = .1.  Decide on an approproate value of N.
 
+% An appropriate value for N seems to be the N that doesn't take too long
+% to run but also manages to capture the behavior of the theoretical plots
+% well.
+
 % Following Algorithm 1.2...
 % (1) Initialization
 rng('default');
 Eb = 1;
-N = 8; % num of errors we wait for
+N = 15; % num of errors. High number to get good plots for report.
 P0 = [ .5 .25 .1 ];
 gammas = linspace(1,10,20); % signal-to-noise ratio
 sigma2 = zeros(numel(P0),numel(gammas));
@@ -105,10 +109,10 @@ figure(1);
 for pp = 1:numel(P0)
     subplot(numel(P0),1,pp);
     x = 10*log10(Eb./N0(pp,:));
-    semilogy(x,Pe_theoretical(pp,:), ...
+    semilogy(x,Pe_theoretical(pp,:),'k-', ...
         'DisplayName',sprintf('Theoretical P_{0%d}',pp));
     hold on; grid on;
-    semilogy(x,Pe(pp,:),...
+    semilogy(x,Pe(pp,:),'k--',...
         'DisplayName',sprintf('Simulated P_{0%d}',pp));
     
     legend('show','location','southwest');
@@ -136,13 +140,16 @@ end
 % same axes. Compare them and comment.
 
 figure(2);
-semilogy(x,Pe_theoretical.');
-grid on;
+semilogy(x,Pe_theoretical(1,:),'k-','DisplayName','P_0 = .5');
+grid on; hold on;
+semilogy(x,Pe_theoretical(2,:),'k--','DisplayName','P_0 = .25');
+semilogy(x,Pe_theoretical(3,:),'k-.','DisplayName','P_0 = .1');
 title('Probability of error');
 xlabel('E_b/N_0 (dB)');
 ylabel('Probability of Error');
-legend('P_0 = .5','P_0 = .25','P_0 = .1');
+legend(gca,'show');
 
+% Comment:
 % As P0 decreases, the probability of error decreases for all values of
 % Eb/N0.  The effect is slightly more pronounced for low SNR than at high
 % gamma values.
