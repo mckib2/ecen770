@@ -13,7 +13,7 @@ g1 = [ 1 0 1 ];
 g2 = [ 1 1 1 ];
 
 % Test the encoder
-N = 10000;
+N = 5000;
 m = randi([ 0 1 ],[ 1 N ]);
 c = convencode(m,[ g1; g2 ]);
 
@@ -95,13 +95,11 @@ while (t <= numel(R))
     %fprintf('-----------------t = %d ----------------\n',t);
     
     % Construct the end of each existing path
-    pii = [];
+    pii = ones(size(P))*NaN;
     for ii = 1:numel(P)
         if ~isempty(P{ii})
             p = P{ii};
-            pii = [ pii p(end) ];
-        else
-            pii = [ pii NaN ];
+            pii(ii) = p(end);
         end
     end
     
@@ -147,10 +145,10 @@ while (t <= numel(R))
         % metric.
         
         % Find all the ending nodes
-        pii = [];
+        pii = zeros(size(P));
         for ii = 1:numel(P)
             p = P{ii};
-            pii = [ pii p(end) ];
+            pii(ii) = p(end);
         end
         
         % Now find the node groupings
@@ -177,6 +175,7 @@ end
 [ ~,idx ] = min(M);
 vitPath = P{idx};
 vitPath = [ 1 vitPath ]; % assumed state 0 at beginning
+r_hat = zeros(N,2);
 for ii = 2:numel(vitPath)
     strbin = dec2bin(o(vitPath(ii-1),vitPath(ii)),2);
     r_hat(ii-1,:) = strbin - '0';
