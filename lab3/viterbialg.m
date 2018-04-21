@@ -1,4 +1,4 @@
-function [ r,r_hat,m,m_hat,e ] = viterbialg(N,crossprob,hardsoft)
+function [ r,r_hat,m,m_hat,e ] = viterbialg(N,crossprob,sigma2,hardsoft)
 
 %% (1) Encoder
 % Write a computer program that performs the encoding operation for a
@@ -16,8 +16,8 @@ if strcmp(hardsoft,'hard')
     n = double(rand(1,numel(c)) <= crossprob);
     r = mod(c + n,2);
 else
-    n = randn(1,numel(c))*crossprob;
-    r = c + n;
+    n = randn(numel(c)/2,2)*sqrt(sigma2);
+    r = c;
 end
 
 
@@ -117,8 +117,22 @@ while (t <= numel(R))
                     M(idx) = 0;
                 end
                 val = M(idx);
-                M(idx) = inheritance + M(idx) + sum(abs(dec2bin(R(t),2) - dec2bin(o(ps,q),2)));
                 
+                if strcmp(hardsoft,'hard')
+                    M(idx) = inheritance + M(idx) + sum(abs(dec2bin(R(t),2) - dec2bin(o(ps,q),2)));
+                else
+                    % Find the euclidean distance for each bit pattern
+
+                    Rn = (dec2bin(R(t),2) - '0') + n(t,:);
+                    
+                    d(1) = pdist2(Rn,[ 0 0 ]);
+                    d(2) = pdist2(Rn,[ 0 1 ]);
+                    d(3) = pdist2(Rn,[ 1 0 ]);
+                    d(4) = pdist2(Rn,[ 1 1 ]);
+                    [ ~,mindist ] = min(d);
+                                        
+                    M(idx) = inheritance + M(idx) + sum(abs(dec2bin(mindist-1,2) - dec2bin(o(ps,q),2)));
+                end
                 %fprintf('%d -> %d, R: %d, out: %d, metric: %d\n',ps,q,R(t),o(ps,q),M(idx));
                 P{idx} = [ P{idx} prepend q ];
                 
