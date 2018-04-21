@@ -7,4 +7,5 @@ function [ c ] = convencode(m,g)
     
     % Interleave the rows
     c = reshape(c,1,[]);
+    c = c(1:(numel(m)*size(g,1)));
 end
