@@ -4,6 +4,8 @@
 # 2018-04-14
 
 from numpy import *
+from scipy import special as sp
+import matplotlib.pyplot as plt
 
 ## State Object
 class State(object):
@@ -43,6 +45,28 @@ def getKey(t,thisState,nextState):
 def path_metric(a,b):
 	return(sum(1 for x,y in zip(a,b) if x != y))
 
+
+def qfunc(xlist):
+	# val = 0.5 - 0.5*sp.erf(xlist/sqrt(2))
+	# return(val)
+	if type(xlist) is float64:
+		xlist = [ xlist ]
+
+	p = zeros(len(xlist))
+	for ii in range(len(xlist)):
+		if xlist[ii] < 0:
+			p[ii] = 1 - 0.5*sp.erfc(-xlist[ii]/sqrt(2));
+		else:
+			p[ii] = 0.5*sp.erfc(xlist[ii]/sqrt(2));
+
+	return(p)
+
+def crossprob(N0,Ec):
+	#print('N0: %f, Ec: %f' % (N0,Ec))
+	val = sqrt(2*Ec/N0)
+	val = qfunc(val)
+	return(val)
+
 ## Convolutional Encoder
 def convencode(m,g):
     # Convolve for each g[j]
@@ -52,53 +76,9 @@ def convencode(m,g):
     
     # Interleave the rows
     c = reshape(c,[ 1,-1 ],order='F')
-    return(c)
+    return(c[0])
 
-if __name__ == '__main__':
-
-	## (1) Encoder
-	# Write a computer program that performs the encoding operation
-	# for a convolutional code with transfer matrix:
-	g1 = array([ 1,0,1 ])
-	g2 = array([ 1,1,1 ])
-
-	# Test the encoder
-	m = array([ 1,1,0,0,1,0,1 ])
-	c = convencode(m,array([ g1,g2 ]))
-	#print(c)
-
-	## (2) Hard decision Viterbi
-	# Program and test the hard-decision Viterbi decoder for this
-	# encoder.  Your final result should be a BER performance plot
-	# showing the performance of your code as a function of Eb/N0.
-	# Include a curve that shows the theoretical performance for
-	# uncoded BPSK. You may want to review Lab 1 material.  Do not
-	# forget to incoprorate the rate of the code when generating
-	# noise at specific SNR levels as you (hopefully) did in Lab1.
-	# Make the y-axis log-scale.
-
-	# Let's use Algorithm 12.1 in the book.
-	## (1) Input
-	r = array([ 1,1,1,0,0,0,1,0,1,1,0,1,0,0,0,1 ])
-	print('Start with r:')
-	print(r.astype(float))
-
-	## (3) Initialize
-	# Set M(0) = and M(p) = Inf for p = 1,2,...,2^v - 1 to be
-	# the initial path costs
-	buff_len = 2**4
-	M = array(inf*ones([ buff_len ]))
-	M[0] = 0
-	#print(M)
-
-	# Get some states
-	q1 = State(0,[ 0,1 ],[ 0,2 ],[ '00','11' ])
-	q2 = State(1,[ 2,3 ],[ 0,2 ],[ '01','10' ])
-	q3 = State(2,[ 0,1 ],[ 1,3 ],[ '11','00' ])
-	q4 = State(3,[ 2,3 ],[ 1,3 ],[ '10','01' ])
-	qs = [ q1,q2,q3,q4 ]
-	#print(qs[1].output[1])
-
+def decode(r,qs,hard=True):
 	# Set up occupied states
 	currStates = Occupied()
 	currStates.add([ 0 ]) # start in the 0th state
@@ -110,10 +90,6 @@ if __name__ == '__main__':
 
 	# Set up the branches
 	branches = []
-
-	## (4) Set P = null for initial paths
-	P = array(zeros([ buff_len ]))
-	#print(P)
 
 	## (5) Set t = 0
 	t = 0
@@ -193,7 +169,6 @@ if __name__ == '__main__':
 
 
 	# Print out r_hat
-	print('After applying decoder, r_hat is then:')
 	r_hat = array([])
 	done = False
 	qi = MLPath[0]
@@ -220,6 +195,132 @@ if __name__ == '__main__':
 
 	# Flip r_hat to be the correct direction
 	r_hat = flip(r_hat,axis=0)
+
+	# De-interleave r_hat
+	r_hat0 = r_hat[::2]
+	r_hat1 = r_hat[1::2]
+
+	# Now find m_hat from r_hat
+	m_hat = mod(r_hat0[1::] + r_hat1[1::],2)
+	
+	return(r_hat,m_hat)
+
+if __name__ == '__main__':
+
+	## (1) Encoder
+	# Write a computer program that performs the encoding operation
+	# for a convolutional code with transfer matrix:
+	g1 = array([ 1,0,1 ])
+	g2 = array([ 1,1,1 ])
+
+	# Test the encoder
+	m = array([ 1,1,0,0,1,0,1 ])
+	# m = random.randint(2,size=100000)
+	c = convencode(m,array([ g1,g2 ]))
+	c = c[:-2]
+	print(c)
+
+	## (2) Hard decision Viterbi
+	# Program and test the hard-decision Viterbi decoder for this
+	# encoder.  Your final result should be a BER performance plot
+	# showing the performance of your code as a function of Eb/N0.
+	# Include a curve that shows the theoretical performance for
+	# uncoded BPSK. You may want to review Lab 1 material.  Do not
+	# forget to incoprorate the rate of the code when generating
+	# noise at specific SNR levels as you (hopefully) did in Lab1.
+	# Make the y-axis log-scale.
+
+	# Let's use Algorithm 12.1 in the book.
+	## (1) Input
+	r = array([ 1,1,1,0,0,0,1,0,1,1,0,1,0,0,0,1 ])
+	# n = [ int(x < 0.5) for x in random.random(size=len(c)) ]
+	# r = mod(c + n,2)
+	print('Start with r:')
+	print(r.astype(float))
+
+	# Get some states
+	q1 = State(0,[ 0,1 ],[ 0,2 ],[ '00','11' ])
+	q2 = State(1,[ 2,3 ],[ 0,2 ],[ '01','10' ])
+	q3 = State(2,[ 0,1 ],[ 1,3 ],[ '11','00' ])
+	q4 = State(3,[ 2,3 ],[ 1,3 ],[ '10','01' ])
+	qs = [ q1,q2,q3,q4 ]
+
+	# Perform the decoding
+	r_hat,m_hat = decode(r,qs,hard=True)
+
+	print('After applying decoder, r_hat is then:')
 	print(r_hat)
 	print('And we found bit errors at these locations:')
 	print(absolute(r - r_hat))
+
+	print('Recall that m was:')
+	print(m.astype(float))
+	print('And we get m_hat is:')
+	print(m_hat)
+	print('Bit Error is %d' % sum(mod(m + m_hat,2)))
+
+
+	# input()
+
+	## Now Simulate
+	k = 10000
+	trace_back = 20
+	rate = 1/2
+	Ec = 1
+	Eb = Ec/rate
+	gammas = linspace(1,6,5)
+	N = 100
+	sigma2 = zeros(len(gammas))
+	N0 = zeros(len(gammas))
+	Pe = zeros(len(gammas))
+
+	for ii in range(len(gammas)):
+		# Compute N0, sigma^2
+		N0[ii] = Ec/(rate*gammas[ii])
+		sigma2[ii] = N0[ii]/2
+		p = crossprob(N0[ii],Ec)
+
+		nn = 0
+		nbits = 0
+		while nn < N:
+			# Generate message and codeword. Assume random.
+			m = random.randint(2,size=k)
+			c = convencode(m,array([ g1,g2 ]))
+			c = c[:-2]
+			#print('c')
+			#print(c)
+
+			# Generate noise and recieved signal r
+			n = [ int(x < p) for x in random.random(size=len(c)) ]
+			#print('n, p = %f' % p)
+			#print(n)
+			r = mod(c + n,2)
+			#print('r')
+
+			# Add some bits
+			nbits += k
+
+			# Decode the recieved codeword and get m_hat
+			r_hat,m_hat = decode(r,qs,hard=True)
+			#print(mod(m_hat + m,2))
+
+			# Accumulate error
+			nn += sum(mod(m[0:trace_back] + m_hat[0:trace_back],2))
+			#print(mod(m+m_hat,2))
+			# print(nn)
+			# input()
+
+		Pe[ii] = nn/nbits
+		print('gamma = %f is done with Pe = %f!' % (gammas[ii],Pe[ii]))
+
+	# Get Theoretical uncoded BPSK
+	BPSK = qfunc(sqrt(2*Eb/N0[:]))
+
+	# Plot it
+	plt.semilogy(10*log10(Eb/N0),Pe)
+	plt.semilogy(10*log10(Eb/N0),BPSK)
+	plt.grid(True)
+	plt.title('Bit Error')
+	plt.xlabel('E_b/N_0')
+	plt.ylabel('P_e')
+	plt.show()
