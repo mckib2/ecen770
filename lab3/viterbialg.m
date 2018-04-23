@@ -1,4 +1,4 @@
-function [ r,r_hat,m,m_hat,e ] = viterbialg(N,crossprob,sigma2,hardsoft)
+function [ r,r_hat,m,m_hat,e ] = viterbialg(N,crossprob,sigma,hardsoft)
 
 %% (1) Encoder
 % Write a computer program that performs the encoding operation for a
@@ -8,6 +8,7 @@ g2 = [ 1 1 1 ];
 
 % Test the encoder
 m = randi([ 0 1 ],[ 1 N ]);
+m(1:2) = [ 1 1 ];
 c = convencode(m,[ g1; g2 ]);
 
 % Received signal here
@@ -16,7 +17,7 @@ if strcmp(hardsoft,'hard')
     n = double(rand(1,numel(c)) <= crossprob);
     r = mod(c + n,2);
 else
-    n = randn(numel(c)/2,2)*sqrt(sigma2);
+    n = randn(numel(c)/2,2)*sigma;
     r = c;
 end
 
@@ -123,15 +124,16 @@ while (t <= numel(R))
                 else
                     % Find the euclidean distance for each bit pattern
 
-                    Rn = (dec2bin(R(t),2) - '0') + n(t,:);
+                    Rn = (dec2bin(R(t),2) - '0');
+                    Rn(Rn == 0) = -1;
+                    Rn = Rn + n(t,:);
                     
-                    d(1) = pdist2(Rn,[ 0 0 ]);
-                    d(2) = pdist2(Rn,[ 0 1 ]);
-                    d(3) = pdist2(Rn,[ 1 0 ]);
-                    d(4) = pdist2(Rn,[ 1 1 ]);
-                    [ ~,mindist ] = min(d);
-                                        
-                    M(idx) = inheritance + M(idx) + sum(abs(dec2bin(mindist-1,2) - dec2bin(o(ps,q),2)));
+                    cmp = (dec2bin(o(ps,q),2) - '0');
+                    cmp(cmp == 0) = -1;
+                    quan = pdist2(cmp,Rn,'euclidean');
+                    
+                    M(idx) = inheritance + M(idx) + quan;
+
                 end
                 %fprintf('%d -> %d, R: %d, out: %d, metric: %d\n',ps,q,R(t),o(ps,q),M(idx));
                 P{idx} = [ P{idx} prepend q ];

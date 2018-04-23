@@ -9,17 +9,26 @@ end
 clear;
 close all;
 
-load('hard.mat');
-Pehard = Pe;
+method = 'soft';
 
+if strcmp(method,'hard')
+    load('soft.mat');
+    Pesoft = Pe;
+    gammas_soft = gammas;
+else
+    load('hard.mat');
+    Pehard = Pehard;
+    gammas_hard = gammas;
+end
+    
 mbits = 1e4;
 % [ r,r_hat,m,m_hat,e ] = viterbialg(N);
 
 % Simulation:
 Ec = 1;
 Eb = 2*Ec;
-gammas = linspace(1,2,5);
-N = 2500;
+gammas = linspace(1,5,4);
+N = [ 3000 100 5 2 ];
 sigma2 = zeros(1,numel(gammas));
 N0 = sigma2;
 Pe = sigma2;
@@ -43,9 +52,9 @@ for ii = 1:numel(gammas)
     
     nn = 0;
     nbits = 0;
-    while nn < N
+    while nn < N(ii)
         % Generate recieved codeword - assume random codeword
-        [ ~,~,~,~,e ] = viterbialg(mbits,p,N0(ii)/2,'soft');
+        [ ~,~,~,~,e ] = viterbialg(mbits,p,sqrt(sigma2(ii)),method);
         
         % Add some bits
         nbits = nbits + mbits - 1;
@@ -67,17 +76,24 @@ sim_time = toc;
 fprintf('Simulation took %f seconds to run.\n',sim_time);
 delete(h); % remove wait bar
 
-
 %% Plots
+if strcmp(method,'hard')
+    Pehard = Pe;
+    gammas_hard = gammas;
+else
+    Pesoft = Pe;
+    gammas_soft = gammas;
+end
+
 gammast = 0:10;
 N0t = Eb./(gammast);
 Pe_theoretical = Q(sqrt(2*Eb./N0t));
 
 x2 = 10*log10(Eb./N0t);
 figure(1);
-semilogy(10*log10(linspace(1,3.5,5)),Pehard,'k--','DisplayName','Hard Decision');
+semilogy(10*log10(gammas_hard),Pehard,'k--','DisplayName','Hard Decision');
 hold on; grid on;
-semilogy(10*log10(gammas),Pe,'k-.','DisplayName','Soft Decision');
+semilogy(10*log10(gammas_soft),Pesoft,'k-.','DisplayName','Soft Decision');
 semilogy(x2,Pe_theoretical,'k-','DisplayName','Theoretical');
 title('Probability of Error');
 xlabel('E_b/N_0 (dB)');
